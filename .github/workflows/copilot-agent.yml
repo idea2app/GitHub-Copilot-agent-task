@@ -27,6 +27,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Get default branch
+        id: default_branch
+        run: |
+          DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+          echo "name=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
+
       - name: Create branch
         run: |
           BRANCH_NAME="copilot/$(echo '${{ inputs.title }}' | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')"
@@ -59,7 +65,7 @@ jobs:
           gh pr create \
             --title "${{ inputs.title }}" \
             --body "$PR_BODY" \
-            --base main \
+            --base "${{ steps.default_branch.outputs.name }}" \
             --head "$BRANCH_NAME"
 
   handle-pr-comment:
