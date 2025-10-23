@@ -1,0 +1,95 @@
+name: GitHub Copilot Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Pull Request Title'
+        required: true
+        type: string
+      description:
+        description: 'Pull Request Description / Task Description'
+        required: true
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  create-pr-with-copilot:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create branch
+        run: |
+          BRANCH_NAME="copilot/$(echo '${{ inputs.title }}' | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')"
+          git checkout -b "$BRANCH_NAME"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Create placeholder file
+        run: |
+          mkdir -p src
+          echo "# Task: ${{ inputs.title }}" > src/task.md
+          echo "" >> src/task.md
+          echo "${{ inputs.description }}" >> src/task.md
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/task.md
+          git commit -m "Add task description for Copilot"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create Pull Request with Copilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_BODY="## Task Description
+
+          ${{ inputs.description }}
+
+          ---
+          @github-copilot please implement this task."
+          
+          gh pr create \
+            --title "${{ inputs.title }}" \
+            --body "$PR_BODY" \
+            --base main \
+            --head "$BRANCH_NAME"
+
+  update-pr-with-copilot:
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      github.event.action == 'created'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get PR details
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          PR_BRANCH=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
+          echo "branch=$PR_BRANCH" >> $GITHUB_OUTPUT
+          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Add comment to trigger Copilot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMENT_BODY="${{ github.event.comment.body }}
+
+          ---
+          @github-copilot please update the code based on the above feedback."
+          
+          gh pr comment ${{ steps.pr.outputs.number }} \
+            --body "$COMMENT_BODY"
