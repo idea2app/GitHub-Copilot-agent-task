@@ -47,8 +47,13 @@ The workflow will:
 ### Updating code via comments
 
 1. Open the pull request created by the workflow
-2. Add a comment with your feedback or update request
-3. GitHub Copilot will be automatically tagged to update the code based on your comment
+2. Add a comment mentioning `@github-copilot` with your feedback or update request
+3. GitHub Copilot will respond and update the code based on your comment
+
+Example comment:
+```
+@github-copilot please add input validation for email format and add error messages for empty fields
+```
 
 ## Example
 

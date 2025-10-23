@@ -62,34 +62,20 @@ jobs:
             --base main \
             --head "$BRANCH_NAME"
 
-  update-pr-with-copilot:
+  handle-pr-comment:
     if: |
       github.event_name == 'issue_comment' &&
       github.event.issue.pull_request &&
-      github.event.action == 'created'
+      github.event.action == 'created' &&
+      contains(github.event.comment.body, '@github-copilot')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get PR details
-        id: pr
+      - name: Acknowledge comment
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_NUMBER=${{ github.event.issue.number }}
-          PR_BRANCH=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
-          echo "branch=$PR_BRANCH" >> $GITHUB_OUTPUT
-          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Add comment to trigger Copilot
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          COMMENT_BODY="${{ github.event.comment.body }}
-
-          ---
-          @github-copilot please update the code based on the above feedback."
-          
-          gh pr comment ${{ steps.pr.outputs.number }} \
-            --body "$COMMENT_BODY"
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
+            -f content='eyes'
