@@ -6,9 +6,9 @@ A GitHub Actions workflow that leverages GitHub Copilot to automatically write c
 
 ## Features
 
-- **Manual Trigger**: Create pull requests with task descriptions via `workflow_dispatch` event
-- **Auto Code Generation**: GitHub Copilot automatically implements the task
-- **Comment Updates**: Update code by commenting on pull requests to trigger Copilot revisions
+- **Manual Trigger**: Create agent tasks with task descriptions via `workflow_dispatch` event
+- **Auto Code Generation**: GitHub Copilot agent automatically implements the task in a pull request
+- **Comment Updates**: GitHub Copilot agent automatically responds to comments on the pull request
 
 ## Installation
 
@@ -40,19 +40,27 @@ cd ../..
 5. Click **Run workflow** to start
 
 The workflow will:
-- Create a new branch automatically
-- Create a pull request with your task description
-- Tag GitHub Copilot to implement the task
+- Create a GitHub Copilot agent task with your description
+- Automatically create a pull request where the agent will implement the task
+- The agent will work on the code and push commits to the PR
 
 ### Updating code via comments
 
-1. Open the pull request created by the workflow
-2. Add a comment mentioning `@github-copilot` with your feedback or update request
-3. GitHub Copilot will respond and update the code based on your comment
+1. Open the agent task pull request created by the workflow
+2. Add comments with your feedback, questions, or update requests
+3. The GitHub Copilot agent will automatically respond and update the code
 
-Example comment:
+The agent understands natural language, so you can simply describe what you want:
 ```
-@github-copilot please add input validation for email format and add error messages for empty fields
+Can you add input validation for the email field?
+```
+
+```
+Please add unit tests for the login function
+```
+
+```
+The error handling looks good, but can you also add logging?
 ```
 
 ## Example
@@ -69,11 +77,11 @@ Create a login page with the following features:
 - Error message display
 ```
 
-GitHub Copilot will analyze the description and generate the necessary code in the pull request.
+GitHub Copilot will analyze the description and generate the necessary code in the agent task pull request.
 
 ## Requirements
 
-- GitHub Copilot enabled in your repository
+- GitHub Copilot with agent tasks enabled in your repository
 - GitHub Actions enabled
 - Appropriate permissions for the workflow (contents: write, pull-requests: write, issues: write)
 

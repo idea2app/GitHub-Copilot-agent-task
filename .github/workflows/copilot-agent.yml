@@ -20,68 +20,18 @@ permissions:
   issues: write
 
 jobs:
-  create-pr-with-copilot:
+  create-agent-task:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get default branch
-        id: default_branch
+      - name: Create task description file
         run: |
-          DEFAULT_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
-          echo "name=$DEFAULT_BRANCH" >> $GITHUB_OUTPUT
+          echo "# ${{ inputs.title }}" > /tmp/task-description.md
+          echo "" >> /tmp/task-description.md
+          echo "${{ inputs.description }}" >> /tmp/task-description.md
 
-      - name: Create branch
-        run: |
-          BRANCH_NAME="copilot/$(echo '${{ inputs.title }}' | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')"
-          git checkout -b "$BRANCH_NAME"
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-
-      - name: Create placeholder file
-        run: |
-          mkdir -p src
-          echo "# Task: ${{ inputs.title }}" > src/task.md
-          echo "" >> src/task.md
-          echo "${{ inputs.description }}" >> src/task.md
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/task.md
-          git commit -m "Add task description for Copilot"
-          git push origin "$BRANCH_NAME"
-
-      - name: Create Pull Request with Copilot
+      - name: Create agent task with GitHub CLI
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_BODY="## Task Description
-
-          ${{ inputs.description }}
-
-          ---
-          @github-copilot please implement this task."
-          
-          gh pr create \
-            --title "${{ inputs.title }}" \
-            --body "$PR_BODY" \
-            --base "${{ steps.default_branch.outputs.name }}" \
-            --head "$BRANCH_NAME"
-
-  handle-pr-comment:
-    if: |
-      github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request &&
-      github.event.action == 'created' &&
-      contains(github.event.comment.body, '@github-copilot')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Acknowledge comment
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions \
-            -f content='eyes'
+          gh agent-task create -F /tmp/task-description.md
