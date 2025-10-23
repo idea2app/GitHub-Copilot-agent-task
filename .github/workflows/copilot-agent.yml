@@ -1,0 +1,37 @@
+name: GitHub Copilot Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Pull Request Title'
+        required: true
+        type: string
+      description:
+        description: 'Pull Request Description / Task Description'
+        required: true
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  create-agent-task:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create task description file
+        run: |
+          echo "# ${{ inputs.title }}" > /tmp/task-description.md
+          echo "" >> /tmp/task-description.md
+          echo "${{ inputs.description }}" >> /tmp/task-description.md
+
+      - name: Create agent task with GitHub CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh agent-task create -F /tmp/task-description.md
